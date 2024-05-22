@@ -10,6 +10,7 @@ from cache import MemoryCache
 app = Flask(__name__, static_url_path='')
 
 # SETUP
+# =====
 cache = MemoryCache()
 
 # from vanna.local import LocalContext_OpenAI
