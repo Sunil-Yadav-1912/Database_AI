@@ -8,7 +8,7 @@ from cache import MemoryCache
 from vanna.chromadb import ChromaDB_VectorStore
 from vanna.google import GoogleGeminiChat
 import pandas as pd
-
+import json
 load_dotenv()
 
 app = Flask(__name__, static_url_path='')
@@ -70,14 +70,19 @@ def generate_sql():
     id = cache.generate_id(question=question)
     sql = vn.generate_sql(question=question)
 
+    # query = sql.replace("\n", " ")
+
     cache.set(id=id, field='question', value=question)
     cache.set(id=id, field='sql', value=sql)
+    single_line_query = sql.replace('\n', ' ').replace('  ', ' ').strip()
+
+    # Update the text in the original data
 
     return jsonify(
         {
             "type": "sql",
             "id": id,
-            "text": sql,
+            "text": single_line_query,
         })
 
 
@@ -162,16 +167,15 @@ def remove_training_data():
     else:
         return jsonify({"type": "error", "error": "Couldn't remove training data"})
 
-
-@app.route('/api/v0/remove_all_data', methods=['POST'])
-def remove_training_data():
+@app.route('/api/v0/remove_all_training_data', methods=['POST'])
+def remove_all_training_data():
 
     try :
         bool = vn.remove_collection(collection_name="sql")
         bool = vn.remove_collection(collection_name="ddl")
         bool = vn.remove_collection(collection_name="documentation")
     except Exception as e:
-        print("TRAINING ERROR", e)
+        print("ERASING ERROR", e)
         return jsonify({"type": "error", "error": str(e)})
     if bool:
         return jsonify({"success": True})
@@ -196,14 +200,14 @@ def add_training_data():
             elif row['training_data_type'] == 'documentation':
                 vn.train(documentation=row['content'])
             elif row['training_data_type'] == 'sql':
-                if row['question'] != 'null':
+                if row['question'] != 'empty':
                     vn.train(
                         question=row['question'],
                         sql=row['content'])
                 else:
                     vn.train(sql=row['content'])
         # id = vn.train(question=question, sql=sql, ddl=ddl, documentation=documentation)
-        return jsonify({"id": id})
+        return jsonify({"response": "true"})
     except Exception as e:
         print("TRAINING ERROR", e)
         return jsonify({"type": "error", "error": str(e)})
