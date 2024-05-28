@@ -20,8 +20,8 @@ cache = MemoryCache()
 class MyVanna(ChromaDB_VectorStore, GoogleGeminiChat):
     def __init__(self, config=None):
         ChromaDB_VectorStore.__init__(self, config=config)
-        GoogleGeminiChat.__init__(self, config={'api_key': 'AIzaSyAlEoLbvOCy87ETAQghcmL-DTXsfE0Hd8A',
-                                                'model': "gemini-1.5-flash"})
+        GoogleGeminiChat.__init__(self, config={'api_key': YOUR_GEMINI_API_KEY,
+                                                'model': YOUR_GEMINI_API_MODEL})
 
 
 vn = MyVanna()
