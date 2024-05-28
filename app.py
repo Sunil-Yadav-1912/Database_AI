@@ -163,6 +163,22 @@ def remove_training_data():
         return jsonify({"type": "error", "error": "Couldn't remove training data"})
 
 
+@app.route('/api/v0/remove_all_data', methods=['POST'])
+def remove_training_data():
+
+    try :
+        bool = vn.remove_collection(collection_name="sql")
+        bool = vn.remove_collection(collection_name="ddl")
+        bool = vn.remove_collection(collection_name="documentation")
+    except Exception as e:
+        print("TRAINING ERROR", e)
+        return jsonify({"type": "error", "error": str(e)})
+    if bool:
+        return jsonify({"success": True})
+    else:
+        return jsonify({"type": "error", "error": "Couldn't remove training data"})
+
+    
 @app.route('/api/v0/train', methods=['POST'])
 def add_training_data():
     # question = flask.request.json.get('question')
@@ -239,4 +255,4 @@ def root():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True,port=5007)
