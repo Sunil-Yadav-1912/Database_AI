@@ -516,7 +516,7 @@ img,video{
     width:.375rem
 }
 .w-28{
-    width:7rem
+    width:4rem
 }
 .w-3{
     width:.75rem
