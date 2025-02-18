@@ -1,4 +1,3 @@
-from dotenv import load_dotenv
 
 from functools import wraps
 from flask import Flask, jsonify, Response, request, redirect, url_for
@@ -11,7 +10,6 @@ import pandas as pd
 import json
 from vanna.ollama import Ollama
 
-load_dotenv()
 
 app = Flask(__name__, static_url_path='')
 
@@ -272,6 +270,6 @@ app = VannaFlaskApp(vn)
 # app.run()
 
 if __name__ == '__main__':
-    # app.run()
+#     app.run()
 
     app.run(debug=True,port=5007)
