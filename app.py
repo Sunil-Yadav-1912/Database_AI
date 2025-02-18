@@ -9,6 +9,8 @@ from vanna.chromadb import ChromaDB_VectorStore
 from vanna.google import GoogleGeminiChat
 import pandas as pd
 import json
+from vanna.ollama import Ollama
+
 load_dotenv()
 
 app = Flask(__name__, static_url_path='')
@@ -17,15 +19,24 @@ app = Flask(__name__, static_url_path='')
 # =====
 cache = MemoryCache()
 
-class MyVanna(ChromaDB_VectorStore, GoogleGeminiChat):
+# class MyVanna(ChromaDB_VectorStore, GoogleGeminiChat):
+#     def __init__(self, config=None):
+#         ChromaDB_VectorStore.__init__(self, config=config)
+#         GoogleGeminiChat.__init__(self, config={'api_key': "API_KEY",
+#                                                 'model': "gemini-1.5-flash-latest"})
+class MyVanna(ChromaDB_VectorStore, Ollama):
     def __init__(self, config=None):
         ChromaDB_VectorStore.__init__(self, config=config)
-        GoogleGeminiChat.__init__(self, config={'api_key': YOUR_GEMINI_API_KEY,
-                                                'model': YOUR_GEMINI_API_MODEL})
+        Ollama.__init__(self, config=config)
 
-
-vn = MyVanna()
-
+vn = MyVanna(config={'model': 'deepseek-r1:1.5b'})
+# vn.connect_to_mysql(
+#     host="host",
+#     dbname="database",
+#     user="user",
+#     password="password",
+#     port=3306
+# )
 def requires_cache(fields):
     def decorator(f):
         @wraps(f)
@@ -253,10 +264,14 @@ def get_question_history():
     return jsonify({"type": "question_history", "questions": cache.get_all(field_list=['question'])})
 
 
-@app.route('/')
-def root():
-    return app.send_static_file('index.html')
-
+# @app.route('/')
+# def root():
+#     return app.send_static_file('index.html')
+from vanna.flask import VannaFlaskApp
+app = VannaFlaskApp(vn)
+# app.run()
 
 if __name__ == '__main__':
+    # app.run()
+
     app.run(debug=True,port=5007)
