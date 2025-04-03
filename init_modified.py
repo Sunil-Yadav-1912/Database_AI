@@ -11,7 +11,8 @@ import requests
 from flasgger import Swagger
 from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_sock import Sock
-
+import config as configures
+import pandas as pd
 from ..base import VannaBase
 from .assets import css_content, html_content, js_content
 from .auth import AuthInterface, NoAuth
@@ -163,7 +164,7 @@ class VannaFlaskAPI:
         """
 
         self.flask_app = Flask(__name__)
-
+        vn.add_training_data("system")
         self.swagger = Swagger(
           self.flask_app, template={"info": {"title": "Vanna API"}}
         )
@@ -811,17 +812,22 @@ class VannaFlaskAPI:
                     id:
                       type: string
             """
-            question = flask.request.json.get("question")
-            sql = flask.request.json.get("sql")
-            ddl = flask.request.json.get("ddl")
-            documentation = flask.request.json.get("documentation")
-
             try:
-                id = vn.train(
-                    question=question, sql=sql, ddl=ddl, documentation=documentation
-                )
-
-                return jsonify({"id": id})
+                training_data = pd.read_csv(configures.TRAINING_SHEET)
+                for index, row in training_data.iterrows():
+                    if row['training_data_type'] == 'ddl':
+                        vn.train(ddl=row['content'])
+                    elif row['training_data_type'] == 'documentation':
+                        vn.train(documentation=row['content'])
+                    elif row['training_data_type'] == 'sql':
+                        if row['question'] != 'empty':
+                            vn.train(
+                                question=row['question'],
+                                sql=row['content'])
+                        else:
+                            vn.train(sql=row['content'])
+                    # id = vn.train(question=question, sql=sql, ddl=ddl, documentation=documentation)
+                return jsonify({"response": "true"})
             except Exception as e:
                 print("TRAINING ERROR", e)
                 return jsonify({"type": "error", "error": str(e)})

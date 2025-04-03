@@ -282,4 +282,4 @@ app.register_blueprint(api_v0_bp)
 
 if __name__ == '__main__':
 
-    app.run(debug=True,host="0.0.0.0",port=5007)
+    app.run(debug=False,host="0.0.0.0",port=5007)

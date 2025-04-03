@@ -149,6 +149,53 @@ class VannaBase(ABC):
 
         return f"Respond in the {self.language} language."
 
+
+    def add_training_data(self, user: any):
+        """
+        Add training data
+        ---
+        parameters:
+            - name: user
+            in: query
+            - name: question
+            in: body
+            type: string
+            - name: sql
+            in: body
+            type: string
+            - name: ddl
+            in: body
+            type: string
+            - name: documentation
+            in: body
+            type: string
+        responses:
+            200:
+            schema:
+                type: object
+                properties:
+                id:
+                    type: string
+        """
+        try:
+            training_data = pd.read_csv(configures.TRAINING_SHEET)
+            for index, row in training_data.iterrows():
+                if row['training_data_type'] == 'ddl':
+                    self.train(ddl=row['content'])
+                elif row['training_data_type'] == 'documentation':
+                    self.train(documentation=row['content'])
+                elif row['training_data_type'] == 'sql':
+                    if row['question'] != 'empty':
+                        self.train(
+                            question=row['question'],
+                            sql=row['content'])
+                    else:
+                        self.train(sql=row['content'])
+                # id = self.train(question=question, sql=sql, ddl=ddl, documentation=documentation)
+            return True
+        except Exception as e:
+            print("TRAINING ERROR", e)
+            return False
     def generate_sql(self, question: str, allow_llm_to_see_data=False, **kwargs) -> str:
         """
         Example:
