@@ -276,7 +276,7 @@ def root():
     return app.send_static_file('index.html')
 
 from vanna.flask import VannaFlaskApp
-vanna_flask_app = VannaFlaskApp(vn,title="Welcome to Creditfair AI")
+vanna_flask_app = VannaFlaskApp(vn,title="Welcome to Creditfair AI", logo=configures.LOGO)
 app = vanna_flask_app.flask_app 
 app.register_blueprint(api_v0_bp)
 
