@@ -1,6 +1,6 @@
 
 from functools import wraps
-from flask import Flask, jsonify, Response, request, redirect, url_for
+from flask import Flask, jsonify, Response, request, redirect, url_for, Blueprint
 import flask
 import os
 from cache import MemoryCache
@@ -9,32 +9,39 @@ from vanna.google import GoogleGeminiChat
 import pandas as pd
 import json
 from vanna.ollama import Ollama
-
+import chardet
+import config as configures
 
 app = Flask(__name__, static_url_path='')
-
-# SETUP
-# =====
 cache = MemoryCache()
 
-# class MyVanna(ChromaDB_VectorStore, GoogleGeminiChat):
-#     def __init__(self, config=None):
-#         ChromaDB_VectorStore.__init__(self, config=config)
-#         GoogleGeminiChat.__init__(self, config={'api_key': "API_KEY",
-#                                                 'model': "gemini-1.5-flash-latest"})
-class MyVanna(ChromaDB_VectorStore, Ollama):
+class MyVanna(ChromaDB_VectorStore, GoogleGeminiChat):
     def __init__(self, config=None):
         ChromaDB_VectorStore.__init__(self, config=config)
-        Ollama.__init__(self, config=config)
+        GoogleGeminiChat.__init__(self, config={'api_key': configures.API_KEY,
+                                                'model_name': configures.MODEL_NAME,
+                                                'temperature' : float(configures.TEMPERATURE)})
 
-vn = MyVanna(config={'model': 'deepseek-r1:7b'})
-# vn.connect_to_mysql(
-#     host="host",
-#     dbname="database",
-#     user="user",
-#     password="password",
-#     port=3306
-# )
+# class MyVanna(ChromaDB_VectorStore, Ollama):
+#     def __init__(self, config=None):
+#         ChromaDB_VectorStore.__init__(self, config=config)
+#         Ollama.__init__(self, config=config)
+
+vn = MyVanna(config={'max_tokens':100000})
+
+
+# vn = MyVanna(config={'model': 'deepseek-r1:7b'})
+vn.connect_to_mysql(
+    host=configures.DB_HOST,
+    dbname=configures.DB_NAME,
+    user=configures.DB_USER,
+    password=configures.DB_PASSWORD,
+    port=int(configures.DB_PORT)
+)
+
+
+api_v0_bp = Blueprint('api_v0', __name__, url_prefix='/api/v0')
+
 def requires_cache(fields):
     def decorator(f):
         @wraps(f)
@@ -79,13 +86,10 @@ def generate_sql():
     id = cache.generate_id(question=question)
     sql = vn.generate_sql(question=question)
 
-    # query = sql.replace("\n", " ")
 
     cache.set(id=id, field='question', value=question)
     cache.set(id=id, field='sql', value=sql)
     single_line_query = sql.replace('\n', ' ').replace('  ', ' ').strip()
-
-    # Update the text in the original data
 
     return jsonify(
         {
@@ -95,35 +99,35 @@ def generate_sql():
         })
 
 
-# @app.route('/api/v0/run_sql', methods=['GET'])
-# @requires_cache(['sql'])
-# def run_sql(id: str, sql: str):
-#     try:
-#         df = vn.run_sql(sql=sql)
-#
-#         cache.set(id=id, field='df', value=df)
-#
-#         return jsonify(
-#             {
-#                 "type": "df",
-#                 "id": id,
-#                 "df": df.head(10).to_json(orient='records'),
-#             })
-#
-    # except Exception as e:
-    #     return jsonify({"type": "error", "error": str(e)})
+@app.route('/api/v0/run_sql', methods=['GET'])
+@requires_cache(['sql'])
+def run_sql(id: str, sql: str):
+    try:
+        df = vn.run_sql(sql=sql)
+
+        cache.set(id=id, field='df', value=df)
+
+        return jsonify(
+            {
+                "type": "df",
+                "id": id,
+                "df": df.head(10).to_json(orient='records'),
+            })
+
+    except Exception as e:
+        return jsonify({"type": "error", "error": str(e)})
 
 
-# @app.route('/api/v0/download_csv', methods=['GET'])
-# @requires_cache(['df'])
-# def download_csv(id: str, df):
-#     csv = df.to_csv()
-#
-#     return Response(
-#         csv,
-#         mimetype="text/csv",
-#         headers={"Content-disposition":
-#                      f"attachment; filename={id}.csv"})
+@app.route('/api/v0/download_csv', methods=['GET'])
+@requires_cache(['df'])
+def download_csv(id: str, df):
+    csv = df.to_csv()
+
+    return Response(
+        csv,
+        mimetype="text/csv",
+        headers={"Content-disposition":
+                     f"attachment; filename={id}.csv"})
 
 
 @app.route('/api/v0/generate_plotly_figure', methods=['GET'])
@@ -192,7 +196,7 @@ def remove_all_training_data():
         return jsonify({"type": "error", "error": "Couldn't remove training data"})
 
     
-@app.route('/api/v0/train', methods=['POST'])
+@api_v0_bp.route('/train', methods=['POST'])
 def add_training_data():
     # question = flask.request.json.get('question')
     # sql = flask.request.json.get('sql')
@@ -200,9 +204,14 @@ def add_training_data():
     # documentation = flask.request.json.get('documentation')
     # print(training_data)
     # Iterate over each row in the DataFrame
-
     try:
-        training_data = pd.read_csv(r"vanna training data - Sheet1.csv")
+    #     Detect file encoding
+    #     with open("vanna.csv", "rb") as f:
+    #         result = chardet.detect(f.read(100000))  # Read a chunk to detect encoding
+    #         encoding_type = result["encoding"]
+
+    #     print(f"Detected encoding: {encoding_type}")
+        training_data = pd.read_csv(config.TRAINING_SHEET)
         for index, row in training_data.iterrows():
             if row['training_data_type'] == 'ddl':
                 vn.train(ddl=row['content'])
@@ -262,14 +271,15 @@ def get_question_history():
     return jsonify({"type": "question_history", "questions": cache.get_all(field_list=['question'])})
 
 
-# @app.route('/')
-# def root():
-#     return app.send_static_file('index.html')
+@app.route('/')
+def root():
+    return app.send_static_file('index.html')
+
 from vanna.flask import VannaFlaskApp
-app = VannaFlaskApp(vn)
-# app.run()
+vanna_flask_app = VannaFlaskApp(vn,title="Welcome to Creditfair AI")
+app = vanna_flask_app.flask_app 
+app.register_blueprint(api_v0_bp)
 
 if __name__ == '__main__':
-#     app.run()
 
     app.run(debug=True,host="0.0.0.0",port=5007)
