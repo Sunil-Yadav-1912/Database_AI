@@ -11,9 +11,11 @@ import json
 from vanna.ollama import Ollama
 import chardet
 import config as configures
+from vanna.flask import VannaFlaskApp
 
 app = Flask(__name__, static_url_path='')
 cache = MemoryCache()
+
 
 class MyVanna(ChromaDB_VectorStore, GoogleGeminiChat):
     def __init__(self, config=None):
@@ -275,11 +277,11 @@ def get_question_history():
 def root():
     return app.send_static_file('index.html')
 
-from vanna.flask import VannaFlaskApp
+
 vanna_flask_app = VannaFlaskApp(vn,title="Welcome to Creditfair AI", logo=configures.LOGO)
-app = vanna_flask_app.flask_app 
+app = vanna_flask_app.flask_app
 app.register_blueprint(api_v0_bp)
 
 if __name__ == '__main__':
-
-    app.run(debug=True,host="0.0.0.0",port=5007)
+    app = VannaFlaskApp(vn)
+    app.run(host="0.0.0.0", port=5007)
