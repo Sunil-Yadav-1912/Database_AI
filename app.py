@@ -205,13 +205,13 @@ def add_training_data():
     # print(training_data)
     # Iterate over each row in the DataFrame
     try:
-    #     Detect file encoding
-    #     with open("vanna.csv", "rb") as f:
-    #         result = chardet.detect(f.read(100000))  # Read a chunk to detect encoding
-    #         encoding_type = result["encoding"]
+        # Detect file encoding
+        with open(configures.TRAINING_SHEET, "rb") as f:
+            result = chardet.detect(f.read(100000))  # Read a chunk to detect encoding
+            encoding_type = result["encoding"]
 
-    #     print(f"Detected encoding: {encoding_type}")
-        training_data = pd.read_csv(config.TRAINING_SHEET)
+        print(f"Detected encoding: {encoding_type}")
+        training_data = pd.read_csv(configures.TRAINING_SHEET)
         for index, row in training_data.iterrows():
             if row['training_data_type'] == 'ddl':
                 vn.train(ddl=row['content'])
